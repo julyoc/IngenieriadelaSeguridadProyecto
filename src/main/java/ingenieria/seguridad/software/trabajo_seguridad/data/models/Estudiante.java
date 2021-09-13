@@ -40,6 +40,8 @@ public class Estudiante implements Serializable {
     private String email;
     @NotEmpty
     private String contrasenia;
+
+    private String role = "USER";
     
     @OneToMany
     private List<Matricula> matricula;

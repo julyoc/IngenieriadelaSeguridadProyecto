@@ -44,4 +44,11 @@ public class EstudianteService implements IEstudianteService {
         return estudianteDao.findById(id).orElse(null);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Estudiante getByEmail(String email) {
+        // TODO Auto-generated method stub
+        return estudianteDao.getByEmail(email);
+    }
+
 }

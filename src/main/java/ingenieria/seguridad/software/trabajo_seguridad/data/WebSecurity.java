@@ -1,34 +1,63 @@
 package ingenieria.seguridad.software.trabajo_seguridad.data;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import ingenieria.seguridad.software.trabajo_seguridad.data.jwt.AuthEntryPointJwt;
+import ingenieria.seguridad.software.trabajo_seguridad.data.jwt.AuthTokenFilter;
+import ingenieria.seguridad.software.trabajo_seguridad.data.services.IUserDetailsService;
 
 @Configuration
 @EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class WebSecurity extends WebSecurityConfigurerAdapter {
-    @Override
-	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-		//auth.inMemoryAuthentication().withUser("root").password("linux").roles("USER", "ADMIN").and()
-		//	.withUser("test").password("test123").roles("USER");
-		auth.inMemoryAuthentication().withUser("root").password("{noop}linux").roles("USER", "ADMIN").and()
-			.withUser("test").password("{noop}test123").roles("USER");
-		super.configure(auth);
+
+	@Autowired
+	IUserDetailsService userDetailsService;
+
+	@Autowired
+	private AuthEntryPointJwt unauthorizedHandler;
+
+	@Bean
+	public AuthTokenFilter authenticationJwtTokenFilter() {
+		return new AuthTokenFilter();
+	}
+
+	@Override
+	public void configure(AuthenticationManagerBuilder authenticationManagerBuilder) throws Exception {
+		authenticationManagerBuilder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+	}
+
+	@Bean
+	@Override
+	public AuthenticationManager authenticationManagerBean() throws Exception {
+		return super.authenticationManagerBean();
+	}
+
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
 	}
 
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
-		http.httpBasic().and().authorizeRequests().antMatchers(HttpMethod.POST, "/api/Estudiante/**").hasRole("USER")
-			.antMatchers(HttpMethod.POST, "/api/Estudiante/").hasRole("USER")
-			.antMatchers(HttpMethod.POST, "/api/Estudiante").hasRole("USER")
-			.antMatchers(HttpMethod.PUT, "/api/Estudiante/**").hasRole("USER")
-			.antMatchers(HttpMethod.DELETE, "/api/Estudiante/**").hasRole("USER")
-			.antMatchers("/api/Matricula/**").hasRole("USER")
-			.antMatchers("/api/Inscripcion/**").hasRole("USER")
-			.and().csrf().disable().formLogin().disable();
-		super.configure(http);
+		http.cors().and().csrf().disable().exceptionHandling().authenticationEntryPoint(unauthorizedHandler)
+			.and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
+			.authorizeRequests().antMatchers("").permitAll()
+			.antMatchers("").permitAll()
+			.anyRequest().authenticated();
+		http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 	}
 }
